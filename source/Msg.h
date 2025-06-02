@@ -8,6 +8,12 @@
 #ifndef MSG_H_
 #define MSG_H_
 
+#include <string.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdint.h>
 
+const uint8_t* Msg_SendMessage(uint8_t id);
+int Msg_ProcessMessage(const uint8_t* recibida);
 
 #endif /* MSG_H_ */

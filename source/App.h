@@ -2,7 +2,7 @@
  * App.h
  *
  *  Created on: 1 jun. 2025
- *      Author: Usuario
+ *      Author: Frida Hernandez
  */
 #include <stdio.h>
 #include <string.h>
@@ -11,8 +11,8 @@
 #ifndef APP_H_
 #define APP_H_
 
-static void phex(uint8_t* str);
-int decrypt_cbc(void);
-int encrypt_cbc(void);
+void App_init();
+void App_send();
+void App_receive();
 
 #endif /* APP_H_ */

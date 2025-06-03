@@ -7,6 +7,8 @@
 
 #include "Msg.h"
 
+static uint8_t counter = 0;
+
 const uint8_t* Msg_SendMessage(uint8_t id)
 {
 	switch(id)
@@ -116,5 +118,15 @@ int Msg_ProcessMessage(const uint8_t* recibida)
         return 15;
     else
     	return -1; // No reconocida
+}
+
+void Msg_ButtonCounter()
+{
+	counter = (counter > 15) ? 0 : counter + 1;
+}
+
+uint8_t Msg_GetCounter()
+{
+	return counter;
 }
 

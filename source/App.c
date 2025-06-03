@@ -9,6 +9,8 @@
 #include "Crypto.h"
 #include "Msg.h"
 
+//#define EXAMPLE_CLOCK_FREQ CLOCK_GetFreq(kCLOCK_CoreSysClk)
+
 void App_init()
 {
 
@@ -16,7 +18,9 @@ void App_init()
 
 void App_send()
 {
-	const uint8_t* message = Msg_SendMessage(1);
+	//SDK_DelayAtLeastUs(500000, EXAMPLE_CLOCK_FREQ); // Esperar 500 ms antes de cada envío
+
+	const uint8_t* message = Msg_SendMessage(Msg_GetCounter());
 
 	uint8_t message_temp[64];
 	strcpy((char*)message_temp, (const char*)message);

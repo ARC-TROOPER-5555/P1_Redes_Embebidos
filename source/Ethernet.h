@@ -9,8 +9,14 @@
 #define ETHERNET_H_
 
 #include <stdint.h>
+
 #include "Crypto.h"
 #include "Msg.h"
+#include "Bits.h"
+#include "App_cfg.h"
+
+#define ETHERNET_MIN_SIZE 60U
+#define HEADER_SIZE 14U
 
 void Ethernet_Init(void);
 void Ethernet_SetFrame(uint8_t *adr, uint8_t *data, size_t length_data);

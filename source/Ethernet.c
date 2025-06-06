@@ -21,7 +21,6 @@
 
 #define EXAMPLE_ENET        ENET
 #define EXAMPLE_PHY_ADDRESS 0x00U
-
 /* MDIO operations. */
 #define EXAMPLE_MDIO_OPS enet_ops
 /* PHY operations. */
@@ -44,13 +43,6 @@
 #define PHY_STABILITY_DELAY_US (0U)
 #endif
 
-#ifndef MAC_ADDRESS
-#define MAC_ADDRESS {0xd4, 0xbe, 0xd9, 0x45, 0x22, 0x60}
-#endif
-
-#define PC_MAC_ADD {0x00, 0x90, 0x9a, 0x9a, 0xa9, 0x1b}
-uint8_t pc_macAddress[6] = PC_MAC_ADD;
-
 AT_NONCACHEABLE_SECTION_ALIGN(enet_rx_bd_struct_t g_rxBuffDescrip[ENET_RXBD_NUM], ENET_BUFF_ALIGNMENT);
 AT_NONCACHEABLE_SECTION_ALIGN(enet_tx_bd_struct_t g_txBuffDescrip[ENET_TXBD_NUM], ENET_BUFF_ALIGNMENT);
 /*! @brief The data buffers can be in cacheable region or in non-cacheable region.
@@ -63,10 +55,11 @@ SDK_ALIGN(uint8_t g_txDataBuff[ENET_TXBD_NUM][SDK_SIZEALIGN(ENET_TXBUFF_SIZE, AP
           APP_ENET_BUFF_ALIGNMENT);
 
 enet_handle_t g_handle;
-uint8_t g_frame[ENET_DATA_LENGTH + 14];
+uint8_t g_frame[ENET_DATA_LENGTH + HEADER_SIZE];
 
 /*! @brief The MAC address for ENET device. */
 uint8_t g_macAddr[6] = MAC_ADDRESS;
+uint8_t pc_macAddress[6] = PC_MAC_ADDRESS;
 
 /*! @brief Enet PHY and MDIO interface handler. */
 static mdio_handle_t mdioHandle = {.ops = &EXAMPLE_MDIO_OPS};
@@ -100,7 +93,7 @@ void Ethernet_Init(void)
         NULL,
     }};
 
-    PRINTF("Inicializando Ethernet...\r\n");
+    PRINTF("Initializing Ethernet...\r\n");
 
     SYSMPU_Enable(SYSMPU, false);
     CLOCK_SetRmii0Clock(1U);
@@ -176,22 +169,19 @@ void Ethernet_SetFrame(uint8_t *adr, uint8_t *data, size_t length_data)
     // Copiar los datos al frame
     for (count = 0; count < length; count++)
     {
-        g_frame[count + 14] = data[count];
+        g_frame[count + HEADER_SIZE] = data[count];
     }
-
-    // Enviar el frame completo (header + payload)
-    //ENET_SendFrame(enet_handle, g_frame, 14 + length);
 }
 
 void Ethernet_SendFrame(size_t size_payload)
 {
 	bool link = false;
-	uint32_t testTxNum = 0;
-	uint8_t size_header = 14;
+	uint32_t testTxNum = FALSE;
+	uint8_t size_header = HEADER_SIZE;
 
-	if(size_payload < 60)
+	if(size_payload < ETHERNET_MIN_SIZE)
 	{
-		size_payload = 60;
+		size_payload = ETHERNET_MIN_SIZE;
 	}
 
 	if (testTxNum < ENET_TRANSMIT_DATA_NUM)
@@ -219,33 +209,27 @@ void Ethernet_SendFrame(size_t size_payload)
 
 void Ethernet_ReceiveFrame(void)
 {
-	uint32_t length = 0;
+	uint32_t length = FALSE;
 	status_t status;
 	enet_data_error_stats_t eErrStatic;
 	/* Get the Frame size */
-	status = ENET_GetRxFrameSize(&g_handle, &length, 0);
+	status = ENET_GetRxFrameSize(&g_handle, &length, FALSE);
 
 	/* Call ENET_ReadFrame when there is a received frame. */
-	if (length != 0)
+	if (length != FALSE)
 	{
 		/* Received valid frame. Deliver the rx buffer with the size equal to length. */
 		uint8_t *data = (uint8_t *)malloc(length);
 		if (data == NULL)
 		{
-			PRINTF("Error: No se pudo asignar memoria para el frame.\r\n");
+			PRINTF("Error: Could not allocate memory for the frame.\r\n");
 			return;
 		}
 
-		status = ENET_ReadFrame(EXAMPLE_ENET, &g_handle, data, length, 0, NULL);
+		status = ENET_ReadFrame(EXAMPLE_ENET, &g_handle, data, length, FALSE, NULL);
 		if (status == kStatus_Success)
 		{
-			PRINTF("\nA frame received. The length %d ", length);
-			PRINTF(" Dest Address %02x:%02x:%02x:%02x:%02x:%02x Src Address %02x:%02x:%02x:%02x:%02x:%02x \r\n",
-				   data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8], data[9],
-				   data[10], data[11]);
-
-			// ✅ INSERTA AQUÍ EL FILTRO
-
+			// Filtrar mensaje por MAC k66
 			bool dirigido_a_mi = true;
 			for (int i = 0; i < 6; i++) {
 			    if (data[i] != g_macAddr[i]) {
@@ -253,32 +237,40 @@ void Ethernet_ReceiveFrame(void)
 			        break;
 			    }
 			}
-			//bool es_broadcast  = (memcmp(data, "\xFF\xFF\xFF\xFF\xFF\xFF", 6) == 0);
-
 			if (!dirigido_a_mi) {
-				PRINTF("⚠️ Paquete no relevante. Ignorado.\n");
+				//PRINTF("⚠️ Package not relevant. Ignored.\n");
 				free(data);
 				return;
 			}
 
-			// 🧪 (Opcional) Dump para depuración
-			for (size_t i = 0; i < length; i++) {
+			//Imprime direccion fuente y destino
+			PRINTF("\nA frame received. The length %d ", length);
+			PRINTF(" Dest Address %02x:%02x:%02x:%02x:%02x:%02x Src Address %02x:%02x:%02x:%02x:%02x:%02x \r\n",
+				   data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8], data[9],
+				   data[10], data[11]);
+
+
+			// Contenido paquete recibido
+			/*PRINTF("Received Data:\n");
+			for (size_t i = 0; i < length; i++)
+			{
 				PRINTF("%02X ", data[i]);
 				if ((i + 1) % 16 == 0) PRINTF("\n");
-			}
+			}*/
 
-			// Saltarse encabezado Ethernet (14 bytes)
-			uint8_t* mensaje = data + 14;
+			// Saltarse encabezado Ethernet (14 bytes) y obtener tamaño de frase
+			uint8_t* mensaje = data + HEADER_SIZE;
 			size_t mensaje_len = ((uint16_t)data[12] << 8) | data[13];
 
+			// Decriptar mensaje y quitar padding
 			size_t length_org_msg = Crypto_DecryptCbc(mensaje, mensaje_len);
 
-			char mensaje_str[300];  // Asegúrate de que tenga tamaño suficiente
+			// Copiar mensaje decriptado para procesarlo
+			char mensaje_str[300];
 			memcpy(mensaje_str, mensaje, length_org_msg);
-			mensaje_str[length_org_msg] = '\0';  // Ahora sí es string C
-
+			mensaje_str[length_org_msg] = '\0';
 			int num_msg = Msg_ProcessMessage(mensaje_str);
-			PRINTF("La frase recibida fue la numero: %d \n\n", num_msg);
+			PRINTF("The response phrase received was number: %d -> %s\n\n", num_msg, mensaje_str);
 		}
 		free(data);
 	}
@@ -286,9 +278,8 @@ void Ethernet_ReceiveFrame(void)
 	{
 		/* Update the received buffer when error happened. */
 		/* Get the error information of the received g_frame. */
-		ENET_GetRxErrBeforeReadFrame(&g_handle, &eErrStatic, 0);
+		ENET_GetRxErrBeforeReadFrame(&g_handle, &eErrStatic, FALSE);
 		/* update the receive buffer. */
-		ENET_ReadFrame(EXAMPLE_ENET, &g_handle, NULL, 0, 0, NULL);
+		ENET_ReadFrame(EXAMPLE_ENET, &g_handle, NULL, FALSE, FALSE, NULL);
 	}
 }
-

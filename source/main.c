@@ -17,9 +17,12 @@ int main(void)
     BOARD_InitBootPins();
     BOARD_InitBootClocks();
     BOARD_InitDebugConsole();
+    uint8_t MAC_PC[] = {0xf8, 0x75, 0xa4, 0xea, 0xb8, 0x42};
+    uint8_t DATOS[] = {"Practica-1 de 6 hola como estas el dia de hoy"};
+
 
     Ethernet_Init();
-    Ethernet_SendFrame();
+    Ethernet_SendFrame(MAC_PC,DATOS,sizeof(DATOS));
 
     while (1)
     {

@@ -7,13 +7,15 @@
 
 #include "Msg.h"
 
-static uint8_t counter = 0;
+static uint8_t counter = FALSE;
+static uint8_t flag = TRUE;
 
 const uint8_t* Msg_SendMessage(uint8_t id)
 {
 	switch(id)
 	{
 		case 0:
+			//return "No to do lo que es oro reluce...";
 			return "No todo lo que es oro reluce...";
 
 		case 1:
@@ -123,6 +125,7 @@ int Msg_ProcessMessage(const uint8_t* recibida)
 void Msg_ButtonCounter()
 {
 	counter = (counter > 15) ? 0 : counter + 1;
+	flag = TRUE;
 }
 
 uint8_t Msg_GetCounter()
@@ -130,3 +133,12 @@ uint8_t Msg_GetCounter()
 	return counter;
 }
 
+uint8_t Msg_GetFlag()
+{
+	return flag;
+}
+
+void Msg_CleanFlag()
+{
+	flag = FALSE;
+}
